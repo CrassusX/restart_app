@@ -83,6 +83,53 @@ iOS does not provide a public API for an app to terminate itself and automatical
 
 The host app owns `GeneratedPluginRegistrant`, so iOS engine restart requires one app-side setup step.
 
+Choose the snippet that matches your iOS lifecycle.
+
+#### Flutter 3.41+ UIScene apps
+
+Use this shape when your app has migrated to Flutter's UIScene lifecycle and your delegate already looks like `@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate`.
+
+Keep the normal plugin registration for the implicit app engine in `didInitializeImplicitFlutterEngine`. Add `RestartAppPlugin.configureEngineRestart` in `application(_:didFinishLaunchingWithOptions:)` so `restart_app` can register plugins on each newly created engine:
+
+```swift
+import UIKit
+import Flutter
+import restart_app
+
+@main
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  override func application(
+    _ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+  ) -> Bool {
+    RestartAppPlugin.configureEngineRestart { engine in
+      GeneratedPluginRegistrant.register(with: engine)
+    }
+
+    return super.application(
+      application,
+      didFinishLaunchingWithOptions: launchOptions
+    )
+  }
+
+  func didInitializeImplicitFlutterEngine(
+    _ engineBridge: FlutterImplicitEngineBridge
+  ) {
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+  }
+}
+```
+
+This follows Flutter's UIScene migration model: the initial engine is registered through `didInitializeImplicitFlutterEngine`, and restarted engines are registered through the `restart_app` callback above.
+
+`restart_app` automatically looks for the active foreground `UIWindowScene` and replaces that scene's key window root `FlutterViewController`. If your app has multiple scenes or a custom native shell, pass a `windowProvider` or `viewControllerInstaller` to `configureEngineRestart` so the plugin targets the correct window.
+
+If you implement your own `SceneDelegate`, keep Flutter's scene lifecycle wiring there too: subclass `FlutterSceneDelegate` or conform to `FlutterSceneLifeCycleProvider`, as described in Flutter's [UISceneDelegate migration guide](https://docs.flutter.dev/release/breaking-changes/uiscenedelegate).
+
+#### Classic AppDelegate apps
+
+Use this shape only when your app still registers plugins from `application(_:didFinishLaunchingWithOptions:)`.
+
 In `ios/Runner/AppDelegate.swift`:
 
 ```swift

@@ -32,6 +32,46 @@ void main() {
     expect(readme, isNot(contains('internal-docs')));
   });
 
+  test('iOS docs explain UIScene integration', () {
+    final docs = {
+      'README.md': File('README.md').readAsStringSync(),
+      'doc/product/ios-engine-restart.mdx':
+          File('doc/product/ios-engine-restart.mdx').readAsStringSync(),
+    };
+
+    for (final entry in docs.entries) {
+      expect(
+        entry.value,
+        contains('FlutterImplicitEngineDelegate'),
+        reason: '${entry.key} should cover Flutter UIScene apps',
+      );
+      expect(
+        entry.value,
+        contains('didInitializeImplicitFlutterEngine'),
+        reason: '${entry.key} should show implicit engine registration',
+      );
+      expect(
+        entry.value,
+        contains('UIWindowScene'),
+        reason: '${entry.key} should explain scene window selection',
+      );
+      expect(
+        entry.value,
+        contains('windowProvider'),
+        reason: '${entry.key} should cover custom scene/window shells',
+      );
+    }
+  });
+
+  test('example README labels the iOS setup as advanced', () {
+    final exampleReadme = File('example/README.md').readAsStringSync();
+
+    expect(exampleReadme, contains('custom `FlutterEngine` factory'));
+    expect(exampleReadme, contains('Do not copy the example'));
+    expect(exampleReadme, contains('FlutterImplicitEngineDelegate'));
+    expect(exampleReadme, contains('../README.md#ios'));
+  });
+
   test('workflow triggers keep docs work in the docs workflow', () {
     final pagesWorkflow =
         File('.github/workflows/docs-pages.yml').readAsStringSync();
