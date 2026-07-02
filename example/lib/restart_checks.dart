@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -12,7 +13,19 @@ import 'package:restart_app_example/platform_probes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-const _imageUrl = 'https://www.gstatic.com/webp/gallery/1.sm.jpg';
+String get _imageUrl {
+  if (kIsWeb) {
+    return Uri.base.resolve('icons/Icon-192.png').toString();
+  }
+  return 'https://www.gstatic.com/webp/gallery/1.sm.jpg';
+}
+
+Uri get _httpCheckUri {
+  if (kIsWeb) {
+    return Uri.base.resolve('manifest.json');
+  }
+  return Uri.parse('https://example.com');
+}
 
 final String restartCheckBootToken =
     DateTime.now().microsecondsSinceEpoch.toString();
@@ -131,7 +144,7 @@ class _RestartChecksPanelState extends State<RestartChecksPanel> {
     });
 
     await probe('http', () async {
-      final response = await http.get(Uri.parse('https://example.com'));
+      final response = await http.get(_httpCheckUri);
       if (response.statusCode < 200 || response.statusCode >= 400) {
         throw StateError('status=${response.statusCode}');
       }
