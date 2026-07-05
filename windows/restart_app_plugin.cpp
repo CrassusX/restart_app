@@ -119,6 +119,32 @@ void RestartAppPlugin::HandleMethodCall(
   std::vector<wchar_t> cmd_buf(cmd_line.begin(), cmd_line.end());
   cmd_buf.push_back(L'\0');
 
+  // Create the new instance suspended so the launch outcome is known before
+  // the response is sent, without two live app instances running side by side.
+  // MSIX/Store-packaged apps, for example, cannot relaunch via CreateProcess
+  // and must surface that as an error instead of a false success.
+  STARTUPINFOW si = {};
+  si.cb = sizeof(si);
+  PROCESS_INFORMATION pi = {};
+
+  BOOL ok = CreateProcessW(
+      exe_path.c_str(), // Application path (handles spaces without quoting)
+      cmd_buf.data(),   // Writable command line copy
+      nullptr,          // Process security attributes
+      nullptr,          // Thread security attributes
+      FALSE,            // Do not inherit handles
+      CREATE_NEW_PROCESS_GROUP | CREATE_SUSPENDED, // Isolated, not yet running
+      nullptr,                                     // Inherit environment
+      nullptr,                                     // Inherit working directory
+      &si, &pi);
+
+  if (!ok) {
+    result->Error("RESTART_FAILED",
+                  "Failed to launch a new application instance (error " +
+                      std::to_string(GetLastError()) + ")");
+    return;
+  }
+
   // Respond before any destructive action so the Dart side receives the result.
   if (structured_result) {
     flutter::EncodableMap restart_result = {
@@ -130,35 +156,25 @@ void RestartAppPlugin::HandleMethodCall(
     result->Success(flutter::EncodableValue("ok"));
   }
 
-  // Launch the new instance and terminate on a detached thread so the platform
+  // Resume the child and terminate on a detached thread so the platform
   // message loop can pump the response back to Dart before the process exits.
-  std::thread([exe_path = std::move(exe_path),
-               cmd_buf = std::move(cmd_buf)]() mutable {
+  std::thread([process = pi.hProcess, thread = pi.hThread]() {
     // Short delay to let the message loop drain the response to Dart.
     Sleep(150);
 
-    STARTUPINFOW si = {};
-    si.cb = sizeof(si);
-    PROCESS_INFORMATION pi = {};
-
-    BOOL ok = CreateProcessW(
-        exe_path.c_str(), // Application path (handles spaces without quoting)
-        cmd_buf.data(),   // Writable command line copy
-        nullptr,          // Process security attributes
-        nullptr,          // Thread security attributes
-        FALSE,            // Do not inherit handles
-        CREATE_NEW_PROCESS_GROUP, // Isolate child from parent's console
-        nullptr,                  // Inherit environment
-        nullptr,                  // Inherit working directory
-        &si, &pi);
-
-    if (ok) {
-      CloseHandle(pi.hProcess);
-      CloseHandle(pi.hThread);
-      ExitProcess(0);
-    } else {
-      OutputDebugStringW(L"restart_app: CreateProcessW failed\n");
+    if (ResumeThread(thread) == static_cast<DWORD>(-1)) {
+      // The child never ran; keep the current process alive rather than
+      // exiting into nothing.
+      OutputDebugStringW(L"restart_app: ResumeThread failed\n");
+      TerminateProcess(process, 1);
+      CloseHandle(thread);
+      CloseHandle(process);
+      return;
     }
+
+    CloseHandle(thread);
+    CloseHandle(process);
+    ExitProcess(0);
   }).detach();
 }
 

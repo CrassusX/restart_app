@@ -170,6 +170,41 @@ void main() {
     expect(capability.platformDefaultMode, RestartMode.flutterEngine);
   });
 
+  test('restartApp falls back to the requested mode on unknown mode', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      log.add(call);
+      return <String, Object?>{
+        'success': true,
+        'mode': 'someFutureMode',
+      };
+    });
+
+    final result = await Restart.restartApp(mode: RestartMode.process);
+
+    expect(result.success, isTrue);
+    expect(result.mode, RestartMode.process);
+  });
+
+  test('restartApp tolerates non-string code and message values', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      log.add(call);
+      return <String, Object?>{
+        'success': false,
+        'mode': RestartMode.process.name,
+        'code': 42,
+        'message': ['unexpected'],
+      };
+    });
+
+    final result = await Restart.restartApp(mode: RestartMode.process);
+
+    expect(result.success, isFalse);
+    expect(result.code, '42');
+    expect(result.message, '[unexpected]');
+  });
+
   test('restartCapability returns unavailable on PlatformException', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {

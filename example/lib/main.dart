@@ -53,6 +53,27 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _engineRestart() async {
+    await _runRestart(
+      pendingMessage: 'Flutter engine restart requested.',
+      restart: () => Restart.restartApp(mode: RestartMode.flutterEngine),
+    );
+  }
+
+  Future<void> _forceKillRestart() async {
+    await _runRestart(
+      pendingMessage: 'Force-kill restart requested.',
+      restart: () => Restart.restartApp(forceKill: true),
+    );
+  }
+
+  Future<void> _webOriginRestart() async {
+    await _runRestart(
+      pendingMessage: 'Restart with explicit web URL requested.',
+      restart: () => Restart.restartApp(webOrigin: Uri.base.toString()),
+    );
+  }
+
   Future<void> _notificationFallback() async {
     await _runRestart(
       pendingMessage: 'iOS notification fallback requested.',
@@ -132,8 +153,20 @@ class _HomePageState extends State<HomePage> {
             child: const Text('Process restart'),
           ),
           OutlinedButton(
+            onPressed: _busy ? null : _engineRestart,
+            child: const Text('Engine restart (iOS)'),
+          ),
+          OutlinedButton(
+            onPressed: _busy ? null : _forceKillRestart,
+            child: const Text('Force-kill restart (Android)'),
+          ),
+          OutlinedButton(
             onPressed: _busy ? null : _notificationFallback,
             child: const Text('iOS notification fallback'),
+          ),
+          OutlinedButton(
+            onPressed: _busy ? null : _webOriginRestart,
+            child: const Text('Restart with explicit web URL'),
           ),
           TextButton(
             onPressed: _busy ? null : _showCapability,

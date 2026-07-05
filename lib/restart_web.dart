@@ -59,12 +59,11 @@ class RestartWeb {
 
   /// Reloads or replaces the current browser location.
   ///
-  /// The `webOrigin` parameter is optional. If it's null, the method uses the `window.origin`
-  /// to get the site origin. This parameter should only be filled when your current origin
-  /// is different than the app's origin. It defaults to null.
-  ///
-  /// This method replaces the current location with the given `webOrigin` (or `window.origin` if
-  /// `webOrigin` is null), effectively reloading the web app.
+  /// The `webOrigin` parameter is optional and defaults to null, which reloads
+  /// the current page and preserves the current route. Pass a hash path such
+  /// as `#/home` to move to that hash route and reload, or a full URL to
+  /// replace the current location entirely. Relative URLs resolve against the
+  /// current page, per normal browser navigation rules.
   String restart(String? webOrigin) {
     try {
       final origin =
@@ -75,14 +74,10 @@ class RestartWeb {
       } else if (origin != null) {
         web.window.location.replace(origin);
       } else {
-        // window.origin returns the literal string "null" in sandboxed iframes,
-        // so we avoid passing it to replace() and fall back to a simple reload.
-        final windowOrigin = web.window.origin.toString();
-        if (windowOrigin.isNotEmpty && windowOrigin != 'null') {
-          web.window.location.replace(windowOrigin);
-        } else {
-          web.window.location.reload();
-        }
+        // Reload the current URL so the active route survives the restart.
+        // This also works in sandboxed iframes, where window.origin is the
+        // literal string "null" and cannot be passed to replace().
+        web.window.location.reload();
       }
       return 'ok';
     } catch (e) {

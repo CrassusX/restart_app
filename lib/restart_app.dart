@@ -57,7 +57,7 @@ class RestartCapability {
       notificationFallback: map['notificationFallback'] == true,
       engineRestartConfigured: map['engineRestartConfigured'] == true,
       platformDefaultMode: _parseRestartMode(map['platformDefaultMode']),
-      reason: map['reason'] as String?,
+      reason: map['reason']?.toString(),
     );
   }
 }
@@ -90,12 +90,18 @@ class RestartResult {
   }
 
   /// Creates [RestartResult] from a platform channel response.
-  factory RestartResult.fromMap(Map<dynamic, dynamic> map) {
+  ///
+  /// When the platform response carries an unrecognized mode, [fallbackMode]
+  /// is used instead of silently reporting [RestartMode.platformDefault].
+  factory RestartResult.fromMap(
+    Map<dynamic, dynamic> map, {
+    RestartMode fallbackMode = RestartMode.platformDefault,
+  }) {
     return RestartResult(
       success: map['success'] == true,
-      mode: _parseRestartMode(map['mode']),
-      code: map['code'] as String?,
-      message: map['message'] as String?,
+      mode: _parseRestartMode(map['mode'], fallback: fallbackMode),
+      code: map['code']?.toString(),
+      message: map['message']?.toString(),
     );
   }
 
@@ -142,8 +148,9 @@ class Restart {
   /// [RestartMode.notificationFallback].
   ///
   /// The [webOrigin] parameter is web-only. If null, the web implementation
-  /// uses the current browser origin. Pass a hash path such as `#/home` when
-  /// your web app uses hash routing.
+  /// reloads the current page and preserves the current route. Pass a hash
+  /// path such as `#/home` when your web app uses hash routing, or a full URL
+  /// to replace the current location entirely.
   ///
   /// The [notificationTitle] and [notificationBody] parameters customize
   /// [RestartMode.notificationFallback]. They do not make
@@ -152,6 +159,10 @@ class Restart {
   /// The [forceKill] parameter is Android-only. When true, the old process is
   /// terminated after the new activity starts. [RestartMode.process] enables
   /// this path automatically on Android.
+  ///
+  /// A successful result means the platform accepted and initiated the
+  /// restart. On Android and iOS the actual swap completes moments after the
+  /// result arrives; failures in that final window are logged natively.
   static Future<RestartResult> restartApp({
     RestartMode mode = RestartMode.platformDefault,
     String? webOrigin,
@@ -171,7 +182,7 @@ class Restart {
       final result = await _channel.invokeMethod<dynamic>('restartApp', args);
 
       if (result is Map) {
-        return RestartResult.fromMap(result);
+        return RestartResult.fromMap(result, fallbackMode: mode);
       }
 
       if (result == 'ok') {
@@ -207,7 +218,10 @@ class Restart {
   }
 }
 
-RestartMode _parseRestartMode(Object? value) {
+RestartMode _parseRestartMode(
+  Object? value, {
+  RestartMode fallback = RestartMode.platformDefault,
+}) {
   if (value is String) {
     for (final mode in RestartMode.values) {
       if (mode.name == value) {
@@ -216,5 +230,5 @@ RestartMode _parseRestartMode(Object? value) {
     }
   }
 
-  return RestartMode.platformDefault;
+  return fallback;
 }

@@ -12,7 +12,7 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  restart_app: ^1.8.3
+  restart_app: ^1.9.0
 ```
 
 Import and call:
@@ -54,7 +54,7 @@ await Restart.restartApp(
 | Parameter | Platform | Description |
 |-----------|----------|-------------|
 | `mode` | All | Requested restart behavior: `platformDefault`, `flutterEngine`, `process`, or `notificationFallback`. |
-| `webOrigin` | Web | Custom origin URL for the reload. Defaults to `window.origin`. Supports hash strategy (e.g. `'#/home'`). |
+| `webOrigin` | Web | Custom URL for the reload. When null, the current page reloads and keeps its route. Supports hash strategy (e.g. `'#/home'`). |
 | `notificationTitle` | iOS | Title of the local notification shown only when `mode` is `notificationFallback`. Defaults to `Restart`. |
 | `notificationBody` | iOS | Body of the local notification shown only when `mode` is `notificationFallback`. Defaults to `Tap to reopen the app.` |
 | `forceKill` | Android | When `true`, fully terminates the process after launching the new activity. Defaults to `false`. `RestartMode.process` enables this path automatically on Android. |

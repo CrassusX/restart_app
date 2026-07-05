@@ -9,6 +9,14 @@ public class RestartAppPlugin: NSObject, FlutterPlugin {
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    // NSWorkspace and NSApp must be used on the main thread; hop explicitly in
+    // case the host app routes platform channels through a custom task runner.
+    DispatchQueue.main.async {
+      self.handleOnMain(call, result: result)
+    }
+  }
+
+  private func handleOnMain(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     if call.method == "restartCapability" {
       result([
         "fullProcessRestart": true,

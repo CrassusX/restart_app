@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'restart_app'
-  s.version          = '1.8.3'
+  s.version          = '1.9.0'
   s.summary          = 'A Flutter plugin to restart or relaunch apps with platform-specific behavior.'
   s.description      = <<-DESC
 A Flutter plugin that helps restart or relaunch Flutter apps with platform-specific behavior, including opt-in iOS Flutter engine restart.
@@ -15,7 +15,7 @@ A Flutter plugin that helps restart or relaunch Flutter apps with platform-speci
   s.source           = { :path => '.' }
   s.source_files = 'restart_app/Sources/restart_app/**/*'
   s.dependency 'Flutter'
-  s.platform = :ios, '11.0'
+  s.platform = :ios, '12.0'
 
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }

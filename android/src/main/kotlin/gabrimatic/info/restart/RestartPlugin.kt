@@ -31,7 +31,7 @@ class RestartPlugin :
      * Handles platform-channel calls from the Dart API.
      *
      * The result is sent before the restart is triggered so the Flutter engine has time to
-     * deliver it across the platform channel. Without this delay, finishAffinity() can tear
+     * deliver it across the platform channel. Without this delay, the task teardown can rip
      * down the engine mid-delivery, causing a FlutterJNI detached error.
      *
      * When forceKill is true, the process is terminated immediately after the new activity
@@ -108,12 +108,14 @@ class RestartPlugin :
                 val delay = if (forceKill) 300L else 100L
                 Handler(Looper.getMainLooper()).postDelayed({
                     try {
+                        // FLAG_ACTIVITY_CLEAR_TASK already finishes every activity in
+                        // the launcher task, so no explicit finishAffinity() is needed;
+                        // calling it again makes ActivityTaskManager log a
+                        // "Duplicate finish request" for the already-finishing activity.
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         currentActivity.startActivity(intent)
                         if (forceKill) {
                             Runtime.getRuntime().exit(0)
-                        } else {
-                            currentActivity.finishAffinity()
                         }
                     } catch (e: Exception) {
                         Log.e("RestartPlugin", "Restart failed: ${e.message}", e)

@@ -1,6 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="gabrimatic.info.restart_example">
 
+    <!-- Android 11+ package visibility: required for url_launcher's
+         canLaunchUrl to see browsers that handle https links. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="restart_example">

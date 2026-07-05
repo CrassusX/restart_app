@@ -90,4 +90,36 @@ void main() {
     expect(ciWorkflow, isNot(contains('.github/workflows/docs-pages.yml')));
     expect(ciWorkflow, contains('!test/docs_site_test.dart'));
   });
+
+  test('ci workflow path filters cover every source surface', () {
+    final ciWorkflow = File('.github/workflows/ci.yml').readAsStringSync();
+
+    // ci.yml uses a paths allow-list duplicated under push and pull_request.
+    // Every release-relevant surface must appear in both lists, or changes to
+    // it silently stop triggering CI.
+    const requiredEntries = [
+      "'.github/workflows/ci.yml'",
+      "'.github/ci/**'",
+      "'analysis_options.yaml'",
+      "'pubspec.yaml'",
+      "'lib/**'",
+      "'android/**'",
+      "'ios/**'",
+      "'linux/**'",
+      "'macos/**'",
+      "'windows/**'",
+      "'example/**'",
+      "'test/**'",
+    ];
+
+    for (final entry in requiredEntries) {
+      final occurrences = entry.allMatches(ciWorkflow).length;
+      expect(
+        occurrences,
+        greaterThanOrEqualTo(2),
+        reason: '$entry must be listed under both push and pull_request '
+            'paths in ci.yml (found $occurrences)',
+      );
+    }
+  });
 }

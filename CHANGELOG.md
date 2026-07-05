@@ -1,3 +1,18 @@
+## 1.9.0
+
+* Changed the web default restart to reload the current page, keeping the active route instead of jumping to the origin root; `webOrigin` still overrides the target
+* Fixed Windows so a failed relaunch (for example MSIX/Store-packaged apps) returns a `RESTART_FAILED` error instead of a false success; the new instance now starts suspended and only resumes after the result is delivered
+* Made unknown platform response modes fall back to the requested mode instead of silently reporting `platformDefault`
+* Hardened result parsing so non-string `code`, `message`, and `reason` values can never throw
+* Added web plugin tests that cover the full method-channel contract, plus a Chrome test step in CI
+* Added CI restart proofs that build, run, and verify a real process restart on Linux, Windows, and macOS runners
+* Added explicit engine restart, force-kill restart, and `webOrigin` buttons to the example app
+* Fixed the example Android manifest so `url_launcher` link checks pass on Android 11+ (package visibility `<queries>`)
+* Removed the redundant Android `finishAffinity()` after the relaunch intent, which made ActivityTaskManager log a "Duplicate finish request" on every default restart
+* Prepared the Android build for Flutter's Built-in Kotlin: the Kotlin Gradle Plugin is now applied only on AGP versions below 9, with modernized Kotlin 2.0 tooling
+* Aligned the iOS CocoaPods minimum with Swift Package Manager at iOS 12
+* Made the macOS handler hop to the main thread explicitly before touching AppKit
+
 ## 1.8.3
 
 * Made `Restart.restartApp(...)` the single Dart restart entry point

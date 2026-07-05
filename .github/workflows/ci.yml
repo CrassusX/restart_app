@@ -5,6 +5,7 @@ on:
     branches: [master]
     paths:
       - '.github/workflows/ci.yml'
+      - '.github/ci/**'
       - 'analysis_options.yaml'
       - 'pubspec.yaml'
       - 'lib/**'
@@ -21,6 +22,7 @@ on:
     branches: [master]
     paths:
       - '.github/workflows/ci.yml'
+      - '.github/ci/**'
       - 'analysis_options.yaml'
       - 'pubspec.yaml'
       - 'lib/**'
@@ -71,6 +73,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter test
+      - run: flutter test --platform chrome test/restart_web_test.dart
       - run: cd example && flutter pub get && flutter test
 
   build-android:
@@ -138,6 +141,103 @@ jobs:
         working-directory: ${{ runner.temp }}\restart_app_windows_smoke
       - run: flutter build windows
         working-directory: ${{ runner.temp }}\restart_app_windows_smoke
+
+  run-linux:
+    name: Linux restart proof
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev xvfb
+      - run: flutter create --platforms=linux --project-name restart_proof /tmp/restart_proof
+      - run: cd /tmp/restart_proof && flutter pub add restart_app --path "$GITHUB_WORKSPACE"
+      - run: cp "$GITHUB_WORKSPACE/.github/ci/restart_proof_main.dart" /tmp/restart_proof/lib/main.dart
+      - run: cd /tmp/restart_proof && flutter build linux --release
+      - name: Run app and verify a second instance wrote the proof
+        run: |
+          xvfb-run -a /tmp/restart_proof/build/linux/x64/release/bundle/restart_proof >/dev/null 2>&1 &
+          for i in $(seq 1 45); do
+            [ -f "$HOME/restart_app_ci_proof/restart_proof.txt" ] && break
+            sleep 2
+          done
+          echo "--- restart_result ---"
+          cat "$HOME/restart_app_ci_proof/restart_result.txt" || true
+          echo "--- proof ---"
+          cat "$HOME/restart_app_ci_proof/restart_proof.txt"
+          grep -q RESTARTED_OK "$HOME/restart_app_ci_proof/restart_proof.txt"
+          pkill -f restart_proof || true
+
+  run-windows:
+    name: Windows restart proof
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter create --platforms=windows --project-name restart_proof "$env:RUNNER_TEMP\restart_proof"
+      - run: flutter pub add restart_app --path "$env:GITHUB_WORKSPACE"
+        working-directory: ${{ runner.temp }}\restart_proof
+      - run: Copy-Item "$env:GITHUB_WORKSPACE\.github\ci\restart_proof_main.dart" "lib\main.dart" -Force
+        working-directory: ${{ runner.temp }}\restart_proof
+      - run: flutter build windows --release
+        working-directory: ${{ runner.temp }}\restart_proof
+      - name: Run app and verify a second instance wrote the proof
+        working-directory: ${{ runner.temp }}\restart_proof
+        run: |
+          $proofDir = "$env:USERPROFILE\restart_app_ci_proof"
+          Start-Process "build\windows\x64\runner\Release\restart_proof.exe"
+          for ($i = 0; $i -lt 45; $i++) {
+            if (Test-Path "$proofDir\restart_proof.txt") { break }
+            Start-Sleep -Seconds 2
+          }
+          Write-Host "--- restart_result ---"
+          if (Test-Path "$proofDir\restart_result.txt") { Get-Content "$proofDir\restart_result.txt" }
+          Write-Host "--- proof ---"
+          Get-Content "$proofDir\restart_proof.txt"
+          if (-not (Select-String -Path "$proofDir\restart_proof.txt" -Pattern "RESTARTED_OK" -Quiet)) { exit 1 }
+          Stop-Process -Name restart_proof -Force -ErrorAction SilentlyContinue
+
+  run-macos:
+    name: macOS restart proof
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter create --platforms=macos --project-name restart_proof /tmp/restart_proof
+      - run: cd /tmp/restart_proof && flutter pub add restart_app --path "$GITHUB_WORKSPACE"
+      - run: cp "$GITHUB_WORKSPACE/.github/ci/restart_proof_main.dart" /tmp/restart_proof/lib/main.dart
+      - run: cd /tmp/restart_proof && flutter build macos --debug
+      - name: Run app and verify a second instance wrote the proof
+        run: |
+          open /tmp/restart_proof/build/macos/Build/Products/Debug/restart_proof.app
+          # The default macOS app template is sandboxed, so HOME resolves to
+          # the app container; check both locations.
+          CONTAINER="$HOME/Library/Containers/com.example.restartProof/Data"
+          for i in $(seq 1 45); do
+            if [ -f "$CONTAINER/restart_app_ci_proof/restart_proof.txt" ] \
+              || [ -f "$HOME/restart_app_ci_proof/restart_proof.txt" ]; then
+              break
+            fi
+            sleep 2
+          done
+          PROOF="$HOME/restart_app_ci_proof/restart_proof.txt"
+          [ -f "$CONTAINER/restart_app_ci_proof/restart_proof.txt" ] \
+            && PROOF="$CONTAINER/restart_app_ci_proof/restart_proof.txt"
+          echo "--- restart_result ---"
+          cat "${PROOF%restart_proof.txt}restart_result.txt" || true
+          echo "--- proof ---"
+          cat "$PROOF"
+          grep -q RESTARTED_OK "$PROOF"
+          pkill -f restart_proof || true
 
   kotlin-format:
     name: Kotlin format
