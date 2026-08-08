@@ -1,5 +1,7 @@
 ## 1.9.0
 
+**Upgrade notes:** Android `minSdk` rises from 16 to 21 and the Android toolchain moves to Java 17, AGP 8.1.4 and Kotlin 2.0.21; the iOS CocoaPods minimum rises from 11.0 to 12.0. Apps on older toolchains must update their build setup before upgrading. On web, the default restart now reloads the current page instead of navigating to the site origin root; pass `webOrigin` to keep the previous behavior.
+
 * Changed the web default restart to reload the current page, keeping the active route instead of jumping to the origin root; `webOrigin` still overrides the target
 * Fixed Windows so a failed relaunch (for example MSIX/Store-packaged apps) returns a `RESTART_FAILED` error instead of a false success; the new instance now starts suspended and only resumes after the result is delivered
 * Made unknown platform response modes fall back to the requested mode instead of silently reporting `platformDefault`
