@@ -12,7 +12,7 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  restart_app: ^1.9.0
+  restart_app: ^1.9.1
 ```
 
 Import and call:
@@ -279,6 +279,14 @@ void myIsolateFunction(SendPort sendPort) {
 ## Requirements
 
 **Dart SDK:** `>=3.4.0` · **Flutter:** `>=3.22.0`
+
+| Platform | Minimum |
+|----------|---------|
+| Android | `minSdk` 21, Java 17, Android Gradle Plugin 8 or 9 |
+| iOS | 12.0 |
+| macOS | 10.15 |
+
+The Android module builds on Android Gradle Plugin 8 and 9. It applies the Kotlin Gradle Plugin only when nothing else has already provided Kotlin, so it builds on both AGP majors with the Flutter template default `android.builtInKotlin=false`. Turning built-in Kotlin on is a separate Flutter migration that needs Flutter 3.47 or later; on earlier Flutter releases it fails for every plugin, including Flutter's own plugin template.
 
 ## Author
 
