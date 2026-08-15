@@ -87,6 +87,41 @@ jobs:
           cache: true
       - run: cd example && flutter pub get && flutter build apk
 
+  build-android-agp9:
+    name: Build Android on AGP ${{ matrix.agp }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - agp: '9.0.1'
+            gradle: '9.1.0'
+          - agp: '9.1.0'
+            gradle: '9.5.0'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      # The example app stays on AGP 8, so a fresh app pins the AGP 9 toolchain
+      # instead. AGP 9 defaults to built-in Kotlin while the Flutter templates
+      # still generate android.builtInKotlin=false, and that combination is what
+      # broke the plugin in 1.9.0 (issue #56).
+      - run: flutter create --platforms=android --project-name restart_app_agp9_smoke /tmp/restart_app_agp9_smoke
+      - name: Pin AGP ${{ matrix.agp }} and Gradle ${{ matrix.gradle }}
+        working-directory: /tmp/restart_app_agp9_smoke/android
+        run: |
+          settings=$(ls settings.gradle.kts settings.gradle 2>/dev/null | head -1)
+          wrapper=gradle/wrapper/gradle-wrapper.properties
+          sed -i -E 's|(com\.android\.application"\)? version ")[0-9.]+"|\1${{ matrix.agp }}"|' "$settings"
+          sed -i -E 's#gradle-[0-9.]+-(all|bin)\.zip#gradle-${{ matrix.gradle }}-\1.zip#' "$wrapper"
+          grep -qE 'com\.android\.application"\)? version "${{ matrix.agp }}"' "$settings"
+          grep -qE 'gradle-${{ matrix.gradle }}-(all|bin)\.zip' "$wrapper"
+          cat "$settings" "$wrapper" gradle.properties
+      - run: cd /tmp/restart_app_agp9_smoke && flutter pub add restart_app --path "$GITHUB_WORKSPACE"
+      - run: cd /tmp/restart_app_agp9_smoke && flutter build apk --debug
+
   build-web:
     name: Build web example
     runs-on: ubuntu-latest

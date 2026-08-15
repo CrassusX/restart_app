@@ -23,18 +23,36 @@ rootProject.allprojects {
 
 apply plugin: 'com.android.library'
 
-// With AGP 9+ Flutter provides Built-in Kotlin, so applying the Kotlin
-// Gradle Plugin there would fail the build. Apply it only on older AGP.
+// Kotlin can reach this project from three different places:
+//
+//   1. Built-in Kotlin, where AGP itself provides the compiler and the `kotlin`
+//      extension. It is the default from AGP 9 and an opt-in flag before that.
+//   2. Flutter 3.44+, which applies the Kotlin Gradle Plugin to every plugin project
+//      whose build file does not already declare it.
+//   3. Older Flutter on older AGP, which does neither, so the plugin applies it here.
+//
+// An AGP major version alone does not identify case 1: the Flutter 3.44 app template
+// generates AGP 9 with android.builtInKotlin=false, and a version check leaves that
+// combination with no Kotlin plugin and no `kotlin` extension at all.
+//
+// Do not rewrite the plugin call below as a literal `apply plugin` statement. Flutter
+// scans this file as text (FlutterPluginUtils.detectApplyingKotlinGradlePlugin) and
+// skips case 2 for any plugin whose build file matches that syntax at the start of a
+// line, which would bring back the same gap under a different name.
 // https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
 def agpMajor = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')[0] as int
-if (agpMajor < 9) {
-    apply plugin: 'kotlin-android'
+def builtInKotlinProperty = project.findProperty('android.builtInKotlin')
+def builtInKotlin =
+    builtInKotlinProperty == null
+        ? agpMajor >= 9
+        : Boolean.parseBoolean(builtInKotlinProperty.toString())
+
+if (!builtInKotlin && project.extensions.findByName('kotlin') == null) {
+    project.pluginManager.apply('org.jetbrains.kotlin.android')
 }
 
 android {
-    if (project.android.hasProperty("namespace")) {
-        namespace 'gabrimatic.info.restart'
-    }
+    namespace 'gabrimatic.info.restart'
 
     compileSdk 34
 
