@@ -10,7 +10,6 @@ import {
 } from '@ohos/flutter_ohos';
 import common from '@ohos.app.ability.common';
 import Want from '@ohos.app.ability.Want';
-import BusinessError from '@ohos.base.BusinessError';
 import { deviceInfo } from '@kit.BasicServicesKit';
 
 /**
@@ -76,11 +75,10 @@ export default class RestartPlugin implements FlutterPlugin, MethodCallHandler, 
   }
 
   private handleRestartApp(call: MethodCall, result: MethodResult): void {
-    const args = (call.arguments ?? {}) as Record<string, Object | boolean | string | null | undefined>;
-    const modeValue = args['mode'];
+    const modeValue = call.argument('mode') as string | undefined;
     const mode = typeof modeValue === 'string' ? modeValue : 'platformDefault';
-    const structuredResult = args['structuredResult'] === true;
-    const forceKill = args['forceKill'] === true;
+    const structuredResult = call.argument('structuredResult') as boolean | undefined;
+    const forceKill = call.argument('forceKill') as boolean | undefined;
 
     // OHOS only exposes a full process restart. `flutterEngine` and
     // `notificationFallback` have no OHOS implementation.
@@ -104,29 +102,25 @@ export default class RestartPlugin implements FlutterPlugin, MethodCallHandler, 
     // Reply before the destructive work so the platform channel result can
     // cross the bridge before the process is torn down. This mirrors the
     // delay used by the Android implementation.
-    if (structuredResult) {
-      result.success({
-        success: true,
-        mode: resolvedMode,
-      });
+    if (structuredResult === true) {
+      const payload: Map<string, Object> = new Map<string, Object>();
+      payload.set('success', true as Object);
+      payload.set('mode', resolvedMode as Object);
+      result.success(payload);
     } else {
       result.success('ok');
     }
 
     setTimeout(() => {
-      this.performRestart(abilityContext, resolvedMode);
+      this.performRestart(abilityContext);
     }, 300);
   }
 
-  private performRestart(
-    abilityContext: common.UIAbilityContext,
-    mode: 'platformDefault' | 'process',
-  ): void {
-    const want: Want = {
-      bundleName: abilityContext.abilityInfo.bundleName,
-      abilityName: abilityContext.abilityInfo.name,
-      moduleName: abilityContext.abilityInfo.moduleName,
-    };
+  private performRestart(abilityContext: common.UIAbilityContext): void {
+    const want = new Want();
+    want.bundleName = abilityContext.abilityInfo.bundleName;
+    want.abilityName = abilityContext.abilityInfo.name;
+    want.moduleName = abilityContext.abilityInfo.moduleName;
 
     // `platformDefault` and `process` both map to a full process relaunch on
     // OHOS, which matches Android's cold-start behavior. The `mode` value only
@@ -138,7 +132,7 @@ export default class RestartPlugin implements FlutterPlugin, MethodCallHandler, 
         appContext.restartApp(want);
         return;
       } catch (err) {
-        const restartError = err as BusinessError;
+        const restartError = err as Error;
         console.error(
           `[restart_app] ApplicationContext.restartApp failed: ${restartError.message}`,
         );
@@ -152,22 +146,25 @@ export default class RestartPlugin implements FlutterPlugin, MethodCallHandler, 
       .then(() => {
         return abilityContext.terminateSelf();
       })
-      .catch((err: BusinessError) => {
+      .catch((err: Error) => {
         console.error(`[restart_app] startAbility/terminateSelf failed: ${err.message}`);
       });
   }
 
-  private capabilityPayload(): Record<string, Object> {
+  private capabilityPayload(): Map<string, Object> {
     const ready = this.abilityContext != null;
-    return {
-      fullProcessRestart: ready,
-      flutterEngineRestart: false,
-      notificationFallback: false,
-      engineRestartConfigured: false,
-      platformDefaultMode: 'process',
-      reason: ready
+    const payload: Map<string, Object> = new Map<string, Object>();
+    payload.set('fullProcessRestart', ready as Object);
+    payload.set('flutterEngineRestart', false as Object);
+    payload.set('notificationFallback', false as Object);
+    payload.set('engineRestartConfigured', false as Object);
+    payload.set('platformDefaultMode', 'process' as Object);
+    payload.set(
+      'reason',
+      (ready
         ? 'OHOS restarts via ApplicationContext.restartApp (API 12+) with a startAbility + terminateSelf fallback. Flutter engine restart is not supported because a plugin cannot rebuild the ability view without host app cooperation.'
-        : 'No ability context available yet.',
-    };
+        : 'No ability context available yet.') as Object,
+    );
+    return payload;
   }
 }
