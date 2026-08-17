@@ -51,24 +51,25 @@ await Restart.restartApp(
 
 ## Parameters
 
-| Parameter | Platform | Description |
-|-----------|----------|-------------|
-| `mode` | All | Requested restart behavior: `platformDefault`, `flutterEngine`, `process`, or `notificationFallback`. |
-| `webOrigin` | Web | Custom URL for the reload. When null, the current page reloads and keeps its route. Supports hash strategy (e.g. `'#/home'`). |
-| `notificationTitle` | iOS | Title of the local notification shown only when `mode` is `notificationFallback`. Defaults to `Restart`. |
-| `notificationBody` | iOS | Body of the local notification shown only when `mode` is `notificationFallback`. Defaults to `Tap to reopen the app.` |
-| `forceKill` | Android | When `true`, fully terminates the process after launching the new activity. Defaults to `false`. `RestartMode.process` enables this path automatically on Android. |
+| Parameter           | Platform | Description                                                                                                                                                        |
+| ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `mode`              | All      | Requested restart behavior: `platformDefault`, `flutterEngine`, `process`, or `notificationFallback`.                                                              |
+| `webOrigin`         | Web      | Custom URL for the reload. When null, the current page reloads and keeps its route. Supports hash strategy (e.g. `'#/home'`).                                      |
+| `notificationTitle` | iOS      | Title of the local notification shown only when `mode` is `notificationFallback`. Defaults to `Restart`.                                                           |
+| `notificationBody`  | iOS      | Body of the local notification shown only when `mode` is `notificationFallback`. Defaults to `Tap to reopen the app.`                                              |
+| `forceKill`         | Android  | When `true`, fully terminates the process after launching the new activity. Defaults to `false`. `RestartMode.process` enables this path automatically on Android. |
 
 ## Platform behavior
 
-| Platform | Mechanism | Limitations |
-|----------|-----------|-------------|
-| **Android** | Relaunches the main activity via `PackageManager`. Supports Android TV and Fire TV via leanback launcher fallback. `RestartMode.process` and `forceKill: true` kill the process after launch for a clean cold start. | None |
-| **iOS** | Recommended: opt-in Flutter engine restart that creates a new `FlutterEngine`, runs Dart again, re-registers plugins, and replaces the root `FlutterViewController` in the same iOS process. Legacy: local notification + `exit(0)` + user tap. | iOS has no public API for automatic full process restart. Engine restart is not a process restart and cannot reset native singleton state. Legacy fallback requires notification permission and user action. |
-| **Web** | Reloads the page using `window.location`. | None |
-| **macOS** | Launches a new instance via `NSWorkspace` and terminates the current process. | Sandboxed (Mac App Store) builds cannot launch new instances of themselves. Returns a failed result in this case. |
-| **Linux** | Replaces the current process via `execv`. Fully automatic. | None |
-| **Windows** | Launches a new instance via `CreateProcess` and terminates the current process. | MSIX-packaged (Microsoft Store) apps cannot be relaunched via `CreateProcess`. |
+| Platform    | Mechanism                                                                                                                                                                                                                                       | Limitations                                                                                                                                                                                                  |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Android** | Relaunches the main activity via `PackageManager`. Supports Android TV and Fire TV via leanback launcher fallback. `RestartMode.process` and `forceKill: true` kill the process after launch for a clean cold start.                            | None                                                                                                                                                                                                         |
+| **iOS**     | Recommended: opt-in Flutter engine restart that creates a new `FlutterEngine`, runs Dart again, re-registers plugins, and replaces the root `FlutterViewController` in the same iOS process. Legacy: local notification + `exit(0)` + user tap. | iOS has no public API for automatic full process restart. Engine restart is not a process restart and cannot reset native singleton state. Legacy fallback requires notification permission and user action. |
+| **Web**     | Reloads the page using `window.location`.                                                                                                                                                                                                       | None                                                                                                                                                                                                         |
+| **OHOS**    | Restarts the whole process and relaunches the UIAbility through `ApplicationContext.restartApp(want)` (API 12+). On older API levels it falls back to `startAbility(want)` + `terminateSelf()`.                                                 | Requires the app to be focused when restarting. Flutter engine restart is not available.                                                                                                                     |
+| **macOS**   | Launches a new instance via `NSWorkspace` and terminates the current process.                                                                                                                                                                   | Sandboxed (Mac App Store) builds cannot launch new instances of themselves. Returns a failed result in this case.                                                                                            |
+| **Linux**   | Replaces the current process via `execv`. Fully automatic.                                                                                                                                                                                      | None                                                                                                                                                                                                         |
+| **Windows** | Launches a new instance via `CreateProcess` and terminates the current process.                                                                                                                                                                 | MSIX-packaged (Microsoft Store) apps cannot be relaunched via `CreateProcess`.                                                                                                                               |
 
 ## iOS
 
@@ -246,6 +247,24 @@ int main(int argc, char** argv) {
 
 Most Flutter apps don't rely on command-line arguments, so this step is optional.
 
+## OHOS (OpenHarmony / HarmonyOS)
+
+On OHOS, `restart_app` restarts the app the way the Android implementation relaunches it: it takes over the running process and relaunches the app's main UIAbility, giving a clean cold start.
+
+- `RestartMode.platformDefault` and `RestartMode.process` both use the native `ApplicationContext.restartApp(want)` API (API 12+), which restarts the process and relaunches the current UIAbility.
+- On API levels below 12, or if `restartApp` fails, the plugin falls back to `startAbility(want)` followed by `terminateSelf()`.
+- `RestartMode.flutterEngine` and `RestartMode.notificationFallback` are not supported on OHOS and return a failed result.
+
+The plugin resolves the target ability automatically from the active `UIAbilityContext`, so no app-side configuration is required. The restart happens a moment after the platform channel result is delivered to Dart, matching the Android/iOS delivery pattern. `Restart.restartCapability()` reports `fullProcessRestart: true` and `platformDefaultMode: process` on OHOS.
+
+```dart
+final result = await Restart.restartApp();
+
+if (!result.success) {
+  // Show or log result.code and result.message.
+}
+```
+
 ## Background isolates
 
 `Restart.restartApp()` uses a platform channel and must run on the **main isolate**. Calling it from a background isolate throws:
@@ -280,11 +299,11 @@ void myIsolateFunction(SendPort sendPort) {
 
 **Dart SDK:** `>=3.4.0` · **Flutter:** `>=3.22.0`
 
-| Platform | Minimum |
-|----------|---------|
-| Android | `minSdk` 21, Java 17, Android Gradle Plugin 8 or 9 |
-| iOS | 12.0 |
-| macOS | 10.15 |
+| Platform | Minimum                                            |
+| -------- | -------------------------------------------------- |
+| Android  | `minSdk` 21, Java 17, Android Gradle Plugin 8 or 9 |
+| iOS      | 12.0                                               |
+| macOS    | 10.15                                              |
 
 The Android module builds on Android Gradle Plugin 8 and 9. It applies the Kotlin Gradle Plugin only when nothing else has already provided Kotlin, so it builds on both AGP majors with the Flutter template default `android.builtInKotlin=false`. Turning built-in Kotlin on is a separate Flutter migration that needs Flutter 3.47 or later; on earlier Flutter releases it fails for every plugin, including Flutter's own plugin template.
 

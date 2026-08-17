@@ -3,7 +3,7 @@ title: restart_app
 description: Restart or relaunch a Flutter app from Dart with one call.
 ---
 
-`restart_app` gives Flutter apps a single Dart API for restarting or relaunching across Android, iOS, web, macOS, Linux, and Windows.
+`restart_app` gives Flutter apps a single Dart API for restarting or relaunching across Android, iOS, web, macOS, Linux, Windows, and OHOS (OpenHarmony / HarmonyOS).
 
 Each platform uses the safest restart path available to Flutter apps. The package returns a structured `RestartResult` so you can handle unsupported modes, denied permissions, or platform limits without guessing.
 
@@ -23,6 +23,7 @@ if (!result.success) {
 - iOS Flutter engine restart when the host app registers plugins for a new engine.
 - Optional iOS notification fallback when a user-tap relaunch is acceptable.
 - Web page reload through `window.location`.
+- OHOS full process restart through `ApplicationContext.restartApp`.
 - macOS and Windows process relaunch where app packaging permits it.
 - Linux `execv` process replacement.
 

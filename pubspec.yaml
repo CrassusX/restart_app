@@ -44,3 +44,5 @@ flutter:
         pluginClass: RestartAppPlugin
       windows:
         pluginClass: RestartAppPluginCApi
+      ohos:
+        pluginClass: RestartPlugin

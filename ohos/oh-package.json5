@@ -1,0 +1,11 @@
+{
+  name: "restart_app",
+  version: "1.9.1",
+  description: "Restart or relaunch a Flutter app on OpenHarmony / HarmonyOS.",
+  main: "index.ets",
+  author: "",
+  license: "Apache-2.0",
+  dependencies: {
+    "@ohos/flutter_ohos": "file:./har/flutter.har",
+  },
+}

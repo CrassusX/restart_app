@@ -161,8 +161,9 @@ class Restart {
   /// this path automatically on Android.
   ///
   /// A successful result means the platform accepted and initiated the
-  /// restart. On Android and iOS the actual swap completes moments after the
-  /// result arrives; failures in that final window are logged natively.
+  /// restart. On Android, iOS, and OHOS the actual swap completes moments
+  /// after the result arrives; failures in that final window are logged
+  /// natively.
   static Future<RestartResult> restartApp({
     RestartMode mode = RestartMode.platformDefault,
     String? webOrigin,
