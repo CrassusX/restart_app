@@ -1,6 +1,6 @@
 {
   name: "restart_app",
-  version: "1.9.1",
+  version: "1.9.1+9",
   description: "Restart or relaunch a Flutter app on OpenHarmony / HarmonyOS.",
   main: "index.ets",
   author: "",

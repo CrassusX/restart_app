@@ -25,4 +25,4 @@ await Restart.restartApp(
 
 ## OHOS
 
-On OHOS (OpenHarmony / HarmonyOS), `RestartMode.platformDefault` and `RestartMode.process` both restart the whole process through `ApplicationContext.restartApp(want)` (API 12+), falling back to `startAbility` + `terminateSelf` on older API levels. `forceKill` is implied because the process is always restarted. `flutterEngine` and `notificationFallback` are unsupported and return a failed result.
+On OHOS (OpenHarmony / HarmonyOS), `RestartMode.platformDefault` and `RestartMode.process` both restart the whole process through `ApplicationContext.restartApp(want)` (API 12+). The app must be in the foreground, the call must run on the main thread, and repeated calls within 3 seconds may fail with error `16000064`. `flutterEngine` and `notificationFallback` are unsupported and return a failed result.

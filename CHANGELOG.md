@@ -1,7 +1,7 @@
 ## 1.10.0
 
 - Added OHOS (OpenHarmony / HarmonyOS) support through a native `ohos/` plugin
-- On OHOS, `RestartMode.platformDefault` and `RestartMode.process` restart the whole process and relaunch the UIAbility through the native `ApplicationContext.restartApp(want)` API (API 12+), with a `startAbility` + `terminateSelf` fallback on older API levels
+- On OHOS, `RestartMode.platformDefault` and `RestartMode.process` restart the whole process and relaunch the UIAbility through the native `ApplicationContext.restartApp(want)` API (API 12+)
 - `RestartMode.flutterEngine` and `RestartMode.notificationFallback` return a clear unsupported-mode error on OHOS
 - `Restart.restartCapability()` reports `fullProcessRestart: true` and `platformDefaultMode: process` on OHOS
 - Documented OHOS behavior in the platform behavior guide and README

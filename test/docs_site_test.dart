@@ -108,6 +108,7 @@ void main() {
       "'linux/**'",
       "'macos/**'",
       "'windows/**'",
+      "'ohos/**'",
       "'example/**'",
       "'test/**'",
     ];
